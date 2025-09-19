@@ -37,7 +37,7 @@ class RobloxStudioMCPServer {
     this.server = new Server(
       {
         name: 'robloxstudio-mcp',
-        version: '1.5.1',
+        version: '1.6.0',
       },
       {
         capabilities: {

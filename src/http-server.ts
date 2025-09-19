@@ -273,6 +273,24 @@ export function createHttpServer(tools: RobloxStudioTools, bridge: BridgeService
     }
   });
 
+  // Script management endpoints (parity with tools)
+  app.post('/mcp/get_script_source', async (req, res) => {
+    try {
+      const result = await tools.getScriptSource(req.body.instancePath);
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  app.post('/mcp/set_script_source', async (req, res) => {
+    try {
+      const result = await tools.setScriptSource(req.body.instancePath, req.body.source);
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
 
 
   // Add methods to control and check server status

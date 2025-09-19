@@ -562,7 +562,7 @@ handlers.getFileTree = function(requestData)
 			children = {},
 		}
 
-		if instance:IsA("BaseScript") then
+		if instance:IsA("LuaSourceContainer") then
 			node.hasSource = true
 			node.scriptType = instance.ClassName
 		end
@@ -597,7 +597,7 @@ handlers.searchFiles = function(requestData)
 			match = instance.Name:lower():find(query:lower()) ~= nil
 		elseif searchType == "type" then
 			match = instance.ClassName:lower():find(query:lower()) ~= nil
-		elseif searchType == "content" and instance:IsA("BaseScript") then
+		elseif searchType == "content" and instance:IsA("LuaSourceContainer") then
 			match = instance.Source:lower():find(query:lower()) ~= nil
 		end
 
@@ -606,7 +606,7 @@ handlers.searchFiles = function(requestData)
 				name = instance.Name,
 				className = instance.ClassName,
 				path = getInstancePath(instance),
-				hasSource = instance:IsA("BaseScript"),
+				hasSource = instance:IsA("LuaSourceContainer"),
 			})
 		end
 
@@ -810,9 +810,11 @@ handlers.getInstanceProperties = function(requestData)
 			end
 		end
 
-		if instance:IsA("BaseScript") then
+		if instance:IsA("LuaSourceContainer") then
 			properties.Source = instance.Source
-			properties.Enabled = tostring(instance.Enabled)
+			if instance:IsA("BaseScript") then
+				properties.Enabled = tostring(instance.Enabled)
+			end
 		end
 
 		if instance:IsA("BasePart") then
@@ -855,7 +857,7 @@ handlers.getInstanceChildren = function(requestData)
 			className = child.ClassName,
 			path = getInstancePath(child),
 			hasChildren = #child:GetChildren() > 0,
-			hasSource = child:IsA("BaseScript"),
+			hasSource = child:IsA("LuaSourceContainer"),
 		})
 	end
 
@@ -1059,10 +1061,12 @@ handlers.getProjectStructure = function(requestData)
 			children = {},
 		}
 
-		if instance:IsA("BaseScript") then
+		if instance:IsA("LuaSourceContainer") then
 			node.hasSource = true
 			node.scriptType = instance.ClassName
-			node.enabled = instance.Enabled
+			if instance:IsA("BaseScript") then
+				node.enabled = instance.Enabled
+			end
 		end
 
 		if instance:IsA("GuiObject") then
@@ -1168,7 +1172,7 @@ handlers.setProperty = function(requestData)
 			end
 		elseif propertyName == "Name" then
 			instance.Name = tostring(propertyValue)
-		elseif propertyName == "Source" and instance:IsA("BaseScript") then
+		elseif propertyName == "Source" and instance:IsA("LuaSourceContainer") then
 			instance.Source = tostring(propertyValue)
 		elseif propertyName == "Enabled" and instance:IsA("BaseScript") then
 			instance.Enabled = propertyValue == true or propertyValue == "true"
@@ -2041,20 +2045,23 @@ handlers.getScriptSource = function(requestData)
 		return { error = "Instance not found: " .. instancePath }
 	end
 	
-	if not instance:IsA("BaseScript") then
-		return { error = "Instance is not a script: " .. instance.ClassName }
+	if not instance:IsA("LuaSourceContainer") then
+		return { error = "Instance is not a script-like object: " .. instance.ClassName }
 	end
 	
 	local success, result = pcall(function()
-		return {
+		local resp = {
 			instancePath = instancePath,
 			className = instance.ClassName,
 			name = instance.Name,
 			source = instance.Source,
-			enabled = instance.Enabled,
 			sourceLength = string.len(instance.Source),
 			lineCount = select(2, string.gsub(instance.Source, '\n', '\n')) + 1
 		}
+		if instance:IsA("BaseScript") then
+			resp.enabled = instance.Enabled
+		end
+		return resp
 	end)
 	
 	if success then
@@ -2077,8 +2084,8 @@ handlers.setScriptSource = function(requestData)
 		return { error = "Instance not found: " .. instancePath }
 	end
 	
-	if not instance:IsA("BaseScript") then
-		return { error = "Instance is not a script: " .. instance.ClassName }
+	if not instance:IsA("LuaSourceContainer") then
+		return { error = "Instance is not a script-like object: " .. instance.ClassName }
 	end
 	
 	local success, result = pcall(function()
@@ -2103,12 +2110,18 @@ handlers.setScriptSource = function(requestData)
 			local parent = instance.Parent
 			local name = instance.Name
 			local className = instance.ClassName
-			local enabled = instance.Enabled
+			local wasBaseScript = instance:IsA("BaseScript")
+			local enabled
+			if wasBaseScript then
+				enabled = instance.Enabled
+			end
 			
 			local newScript = Instance.new(className)
 			newScript.Name = name
 			newScript.Source = newSource
-			newScript.Enabled = enabled
+			if wasBaseScript then
+				newScript.Enabled = enabled
+			end
 			
 			newScript.Parent = parent
 			instance:Destroy()
