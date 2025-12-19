@@ -27,7 +27,7 @@ local pluginState = {
 	mcpWaitStartTime = nil,
 }
 
-local screenGui = plugin:CreateDockWidgetPluginGui(
+local screenGui = plugin:CreateDockWidgetPluginGuiAsync(
 	"MCPServerInterface",
 	DockWidgetPluginGuiInfo.new(Enum.InitialDockState.Float, false, false, 400, 500, 350, 450)
 )
