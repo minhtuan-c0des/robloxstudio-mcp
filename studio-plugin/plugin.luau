@@ -463,6 +463,80 @@ local function joinLines(lines, hadTrailingNewline)
 	return source
 end
 
+-- Helper to convert property values from JSON to Roblox types
+local function convertPropertyValue(instance, propertyName, propertyValue)
+	-- Handle nil
+	if propertyValue == nil then
+		return nil
+	end
+
+	-- Handle arrays (likely Vector3, Color3, UDim2)
+	if type(propertyValue) == "table" and #propertyValue > 0 then
+		-- Check if it's a Vector3-like property
+		if #propertyValue == 3 then
+			local prop = propertyName:lower()
+			if prop == "position" or prop == "size" or prop == "orientation" or prop == "velocity" or prop == "angularvelocity" then
+				return Vector3.new(propertyValue[1] or 0, propertyValue[2] or 0, propertyValue[3] or 0)
+			elseif prop == "color" or prop == "color3" then
+				return Color3.new(propertyValue[1] or 0, propertyValue[2] or 0, propertyValue[3] or 0)
+			else
+				-- Try to infer from current property type
+				local success, currentVal = pcall(function() return instance[propertyName] end)
+				if success then
+					if typeof(currentVal) == "Vector3" then
+						return Vector3.new(propertyValue[1] or 0, propertyValue[2] or 0, propertyValue[3] or 0)
+					elseif typeof(currentVal) == "Color3" then
+						return Color3.new(propertyValue[1] or 0, propertyValue[2] or 0, propertyValue[3] or 0)
+					end
+				end
+			end
+		elseif #propertyValue == 2 then
+			-- Possibly Vector2
+			local success, currentVal = pcall(function() return instance[propertyName] end)
+			if success and typeof(currentVal) == "Vector2" then
+				return Vector2.new(propertyValue[1] or 0, propertyValue[2] or 0)
+			end
+		end
+	end
+
+	-- Handle object with X, Y, Z keys (Vector3)
+	if type(propertyValue) == "table" and (propertyValue.X or propertyValue.Y or propertyValue.Z) then
+		return Vector3.new(propertyValue.X or 0, propertyValue.Y or 0, propertyValue.Z or 0)
+	end
+
+	-- Handle object with R, G, B keys (Color3)
+	if type(propertyValue) == "table" and (propertyValue.R or propertyValue.G or propertyValue.B) then
+		return Color3.new(propertyValue.R or 0, propertyValue.G or 0, propertyValue.B or 0)
+	end
+
+	-- Handle Enum values (strings like "Ball", "Cylinder", etc.)
+	if type(propertyValue) == "string" then
+		local success, currentVal = pcall(function() return instance[propertyName] end)
+		if success and typeof(currentVal) == "EnumItem" then
+			local enumType = tostring(currentVal.EnumType)
+			local enumSuccess, enumVal = pcall(function()
+				return Enum[enumType][propertyValue]
+			end)
+			if enumSuccess and enumVal then
+				return enumVal
+			end
+		end
+		-- Handle BrickColor
+		if propertyName == "BrickColor" then
+			return BrickColor.new(propertyValue)
+		end
+	end
+
+	-- Handle boolean strings
+	if type(propertyValue) == "string" then
+		if propertyValue == "true" then return true end
+		if propertyValue == "false" then return false end
+	end
+
+	-- Return as-is for primitives (number, boolean, string)
+	return propertyValue
+end
+
 local processRequest
 local sendResponse
 local handlers = {}
@@ -1348,45 +1422,28 @@ handlers.setProperty = function(requestData)
 	end
 
 	local success, result = pcall(function()
-		if propertyName == "Parent" then
-			local parentInstance = getInstanceByPath(propertyValue)
-			if parentInstance then
-				instance.Parent = parentInstance
-			else
-				return { error = "Parent instance not found: " .. propertyValue }
+		-- Handle instance reference properties (Parent, PrimaryPart, etc.)
+		if propertyName == "Parent" or propertyName == "PrimaryPart" then
+			if type(propertyValue) == "string" then
+				local refInstance = getInstanceByPath(propertyValue)
+				if refInstance then
+					instance[propertyName] = refInstance
+				else
+					return { error = propertyName .. " instance not found: " .. propertyValue }
+				end
 			end
 		elseif propertyName == "Name" then
 			instance.Name = tostring(propertyValue)
 		elseif propertyName == "Source" and instance:IsA("LuaSourceContainer") then
 			instance.Source = tostring(propertyValue)
-		elseif propertyName == "Enabled" and instance:IsA("BaseScript") then
-			instance.Enabled = propertyValue == true or propertyValue == "true"
-		elseif propertyName == "Text" and (instance:IsA("TextLabel") or instance:IsA("TextButton") or instance:IsA("TextBox")) then
-			instance.Text = tostring(propertyValue)
-		elseif propertyName == "Visible" and instance:IsA("GuiObject") then
-			instance.Visible = propertyValue == true or propertyValue == "true"
-		elseif propertyName == "Anchored" and instance:IsA("BasePart") then
-			instance.Anchored = propertyValue == true or propertyValue == "true"
-		elseif propertyName == "CanCollide" and instance:IsA("BasePart") then
-			instance.CanCollide = propertyValue == true or propertyValue == "true"
-		elseif propertyName == "Transparency" and instance:IsA("BasePart") then
-			instance.Transparency = tonumber(propertyValue) or 0
-		elseif propertyName == "BrickColor" and instance:IsA("BasePart") then
-			instance.BrickColor = BrickColor.new(tostring(propertyValue))
-		elseif propertyName == "Material" and instance:IsA("BasePart") then
-			instance.Material = Enum.Material[tostring(propertyValue)] or instance.Material
-		elseif propertyName == "Size" and instance:IsA("BasePart") then
-			local parts = string.split(tostring(propertyValue), ",")
-			if #parts == 3 then
-				instance.Size = Vector3.new(tonumber(parts[1]) or 1, tonumber(parts[2]) or 1, tonumber(parts[3]) or 1)
-			end
-		elseif propertyName == "Position" and instance:IsA("BasePart") then
-			local parts = string.split(tostring(propertyValue), ",")
-			if #parts == 3 then
-				instance.Position = Vector3.new(tonumber(parts[1]) or 0, tonumber(parts[2]) or 0, tonumber(parts[3]) or 0)
-			end
 		else
-			instance[propertyName] = propertyValue
+			-- Use the generic converter for all other properties
+			local convertedValue = convertPropertyValue(instance, propertyName, propertyValue)
+			if convertedValue ~= nil then
+				instance[propertyName] = convertedValue
+			else
+				instance[propertyName] = propertyValue
+			end
 		end
 
 		ChangeHistoryService:SetWaypoint("Set " .. propertyName .. " property")
@@ -1705,18 +1762,23 @@ handlers.massCreateObjectsWithProperties = function(requestData)
 			if parentInstance then
 				local success, newInstance = pcall(function()
 					local instance = Instance.new(className)
-					
+
 					if name then
 						instance.Name = name
 					end
 
+					-- Set Parent first so property type inference works
+					instance.Parent = parentInstance
+
 					for propertyName, propertyValue in pairs(properties) do
 						pcall(function()
-							instance[propertyName] = propertyValue
+							local convertedValue = convertPropertyValue(instance, propertyName, propertyValue)
+							if convertedValue ~= nil then
+								instance[propertyName] = convertedValue
+							end
 						end)
 					end
 
-					instance.Parent = parentInstance
 					return instance
 				end)
 
@@ -2335,8 +2397,13 @@ handlers.setScriptSource = function(requestData)
 		return { error = "Instance is not a script-like object: " .. instance.ClassName }
 	end
 
-	-- Try UpdateSourceAsync first (works with open script editors)
+	-- Normalize escape sequences that may have been double-escaped
 	local sourceToSet = newSource :: string
+	-- Fix double-escaped newlines, tabs, etc.
+	sourceToSet = sourceToSet:gsub("\\n", "\n")
+	sourceToSet = sourceToSet:gsub("\\t", "\t")
+	sourceToSet = sourceToSet:gsub("\\r", "\r")
+	sourceToSet = sourceToSet:gsub("\\\\", "\\")
 	local updateSuccess, updateResult = pcall(function()
 		local oldSourceLength = string.len(instance.Source)
 
@@ -2434,6 +2501,12 @@ handlers.editScriptLines = function(requestData)
 		return { error = "Instance path, startLine, endLine, and newContent are required" }
 	end
 
+	-- Normalize escape sequences that may have been double-escaped
+	newContent = newContent:gsub("\\n", "\n")
+	newContent = newContent:gsub("\\t", "\t")
+	newContent = newContent:gsub("\\r", "\r")
+	newContent = newContent:gsub("\\\\", "\\")
+
 	local instance = getInstanceByPath(instancePath)
 	if not instance then
 		return { error = "Instance not found: " .. instancePath }
@@ -2511,6 +2584,12 @@ handlers.insertScriptLines = function(requestData)
 	if not instancePath or not newContent then
 		return { error = "Instance path and newContent are required" }
 	end
+
+	-- Normalize escape sequences that may have been double-escaped
+	newContent = newContent:gsub("\\n", "\n")
+	newContent = newContent:gsub("\\t", "\t")
+	newContent = newContent:gsub("\\r", "\r")
+	newContent = newContent:gsub("\\\\", "\\")
 
 	local instance = getInstanceByPath(instancePath)
 	if not instance then
