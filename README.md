@@ -8,7 +8,7 @@
 
 ## What is This?
 
-An MCP server that lets AI explore your game structure, read/edit scripts, and perform bulk changes—all locally and safely.
+An MCP server that lets AI explore your game structure, read/edit scripts, and perform bulk changes all locally and safely.
 
 ## Setup
 
