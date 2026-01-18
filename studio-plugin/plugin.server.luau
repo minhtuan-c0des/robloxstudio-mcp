@@ -1127,6 +1127,42 @@ handlers.getInstanceProperties = function(requestData)
 			properties.BottomSurface = tostring(instance.BottomSurface)
 		end
 
+		-- Asset IDs for Meshes, Sounds, Animations, etc.
+		if instance:IsA("MeshPart") then
+			properties.MeshId = tostring(instance.MeshId)
+			properties.TextureID = tostring(instance.TextureID)
+		end
+
+		if instance:IsA("SpecialMesh") then
+			properties.MeshId = tostring(instance.MeshId)
+			properties.TextureId = tostring(instance.TextureId)
+			properties.MeshType = tostring(instance.MeshType)
+		end
+
+		if instance:IsA("Sound") then
+			properties.SoundId = tostring(instance.SoundId)
+			properties.TimeLength = tostring(instance.TimeLength)
+			properties.IsPlaying = tostring(instance.IsPlaying)
+		end
+
+		if instance:IsA("Animation") then
+			properties.AnimationId = tostring(instance.AnimationId)
+		end
+
+		if instance:IsA("Decal") or instance:IsA("Texture") then
+			properties.Texture = tostring(instance.Texture)
+		end
+
+		if instance:IsA("Shirt") or instance:IsA("Pants") or instance:IsA("ShirtGraphic") then
+			if instance:IsA("ShirtGraphic") then
+				properties.Graphic = tostring(instance.Graphic)
+			elseif instance:IsA("Shirt") then
+				properties.ShirtTemplate = tostring(instance.ShirtTemplate)
+			else
+				properties.PantsTemplate = tostring(instance.PantsTemplate)
+			end
+		end
+
 		properties.ChildCount = tostring(#instance:GetChildren())
 
 		return properties
