@@ -8,11 +8,12 @@ interface PendingRequest {
   resolve: (value: any) => void;
   reject: (error: any) => void;
   timeoutId: ReturnType<typeof setTimeout>;
+  inFlight?: boolean;
 }
 
 export class BridgeService {
   private pendingRequests: Map<string, PendingRequest> = new Map();
-  private requestTimeout = 30000; // 30 seconds timeout
+  private requestTimeout = 120000; // 120 seconds timeout
 
   async sendRequest(endpoint: string, data: any): Promise<any> {
     const requestId = uuidv4();
@@ -41,16 +42,18 @@ export class BridgeService {
   }
 
   getPendingRequest(): { requestId: string; request: { endpoint: string; data: any } } | null {
-    // Get oldest pending request
+    // Get oldest pending request that isn't already being processed
     let oldestRequest: PendingRequest | null = null;
-    
+
     for (const request of this.pendingRequests.values()) {
+      if (request.inFlight) continue;
       if (!oldestRequest || request.timestamp < oldestRequest.timestamp) {
         oldestRequest = request;
       }
     }
 
     if (oldestRequest) {
+      oldestRequest.inFlight = true;
       return {
         requestId: oldestRequest.id,
         request: {
