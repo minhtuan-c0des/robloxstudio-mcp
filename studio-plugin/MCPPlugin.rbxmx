@@ -453,7 +453,16 @@ local function convertPropertyValue(propertyValue, instance, propertyName)
 					propertyValue.Y.Scale or 0, propertyValue.Y.Offset or 0
 				)
 			elseif propertyValue._type == "CFrame" or (propertyValue.Position and propertyValue.RightVector) then
-				return CFrame.new(propertyValue.Position.X, propertyValue.Position.Y, propertyValue.Position.Z)
+				local pos = propertyValue.Position
+				local cf = CFrame.new(pos.X, pos.Y, pos.Z)
+				if propertyValue.Orientation then
+					local o = propertyValue.Orientation
+					cf = cf * CFrame.Angles(math.rad(o.X or 0), math.rad(o.Y or 0), math.rad(o.Z or 0))
+				elseif propertyValue.Components then
+					local c = propertyValue.Components
+					cf = CFrame.new(c[1], c[2], c[3], c[4], c[5], c[6], c[7], c[8], c[9], c[10], c[11], c[12])
+				end
+				return cf
 			-- Check for array format [1, 2, 3]
 			elseif #propertyValue == 3 and type(propertyValue[1]) == "number" then
 				-- Could be Vector3 or Color3 - try to determine from property name
@@ -3244,7 +3253,14 @@ handlers.getAttribute = function(requestData)
 		elseif valueType == "Color3" then
 			serializedValue = { R = value.R, G = value.G, B = value.B, _type = "Color3" }
 		elseif valueType == "CFrame" then
-			serializedValue = { Position = { X = value.Position.X, Y = value.Position.Y, Z = value.Position.Z }, _type = "CFrame" }
+			local rx, ry, rz = value:ToEulerAnglesYXZ()
+			local comps = {value:GetComponents()}
+			serializedValue = {
+				Position = { X = value.Position.X, Y = value.Position.Y, Z = value.Position.Z },
+				Orientation = { X = math.deg(rx), Y = math.deg(ry), Z = math.deg(rz) },
+				Components = comps,
+				_type = "CFrame",
+			}
 		elseif valueType == "UDim2" then
 			serializedValue = { X = { Scale = value.X.Scale, Offset = value.X.Offset }, Y = { Scale = value.Y.Scale, Offset = value.Y.Offset }, _type = "UDim2" }
 		elseif valueType == "BrickColor" then
@@ -3349,7 +3365,14 @@ handlers.getAttributes = function(requestData)
 			elseif valueType == "Color3" then
 				serializedValue = { R = value.R, G = value.G, B = value.B, _type = "Color3" }
 			elseif valueType == "CFrame" then
-				serializedValue = { Position = { X = value.Position.X, Y = value.Position.Y, Z = value.Position.Z }, _type = "CFrame" }
+				local rx, ry, rz = value:ToEulerAnglesYXZ()
+				local comps = {value:GetComponents()}
+				serializedValue = {
+					Position = { X = value.Position.X, Y = value.Position.Y, Z = value.Position.Z },
+					Orientation = { X = math.deg(rx), Y = math.deg(ry), Z = math.deg(rz) },
+					Components = comps,
+					_type = "CFrame",
+				}
 			elseif valueType == "UDim2" then
 				serializedValue = { X = { Scale = value.X.Scale, Offset = value.X.Offset }, Y = { Scale = value.Y.Scale, Offset = value.Y.Offset }, _type = "UDim2" }
 			elseif valueType == "BrickColor" then
