@@ -60,6 +60,9 @@ export function createHttpServer(tools: RobloxStudioTools, bridge: BridgeService
 
   // Plugin readiness endpoint
   app.post('/ready', (req, res) => {
+    // Clear any stale pending requests from a previous plugin instance
+    // (e.g. when switching Studio places or reconnecting after a crash)
+    bridge.clearAllPendingRequests();
     pluginConnected = true;
     lastPluginActivity = Date.now();
     res.json({ success: true });
