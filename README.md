@@ -26,6 +26,11 @@ gemini mcp add robloxstudio npx --trust -- -y robloxstudio-mcp
 claude mcp add robloxstudio -- npx robloxstudio-mcp
 ```
 
+**Codex:**
+```bash
+codex mcp add robloxstudio -- npx -y robloxstudio-mcp
+```
+
 Plugin shows "Connected" when ready.
 
 <details>
