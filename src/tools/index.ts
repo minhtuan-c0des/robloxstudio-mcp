@@ -621,4 +621,19 @@ export class RobloxStudioTools {
       ]
     };
   }
+
+  async executeLuau(code: string) {
+    if (!code) {
+      throw new Error('Code is required for execute_luau');
+    }
+    const response = await this.client.request('/api/execute-luau', { code });
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response, null, 2)
+        }
+      ]
+    };
+  }
 }

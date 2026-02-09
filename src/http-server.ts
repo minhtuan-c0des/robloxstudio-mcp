@@ -312,6 +312,15 @@ export function createHttpServer(tools: RobloxStudioTools, bridge: BridgeService
     }
   });
 
+  app.post('/mcp/execute_luau', async (req, res) => {
+    try {
+      const result = await tools.executeLuau(req.body.code);
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
   // Property modification endpoint
   app.post('/mcp/set_property', async (req, res) => {
     try {

@@ -863,6 +863,20 @@ class RobloxStudioMCPServer {
               type: 'object',
               properties: {}
             }
+          },
+          {
+            name: 'execute_luau',
+            description: 'Execute arbitrary Luau code in Roblox Studio and return the result. The code runs in the plugin context with access to game, workspace, and all services. Use print() or warn() to produce output. The return value of the code (if any) is captured. Useful for querying game state, running one-off operations, or testing logic.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                code: {
+                  type: 'string',
+                  description: 'Luau code to execute. Can use print() for output. The return value is captured.'
+                }
+              },
+              required: ['code']
+            }
           }
         ]
       };
@@ -974,6 +988,10 @@ class RobloxStudioMCPServer {
           // Selection Tools
           case 'get_selection':
             return await this.tools.getSelection();
+
+          // Execute Luau
+          case 'execute_luau':
+            return await this.tools.executeLuau((args as any)?.code as string);
 
           default:
             throw new McpError(

@@ -862,6 +862,9 @@ processRequest = function(request)
 	-- Selection endpoints
 	elseif endpoint == "/api/get-selection" then
 		return handlers.getSelection(data)
+	-- Execute Luau code
+	elseif endpoint == "/api/execute-luau" then
+		return handlers.executeLuau(data)
 	else
 		return { error = "Unknown endpoint: " .. tostring(endpoint) }
 	end
@@ -3263,6 +3266,64 @@ handlers.getSelection = function(requestData)
 		count = #selection,
 		message = #selection .. " object(s) selected"
 	}
+end
+
+handlers.executeLuau = function(requestData)
+	local code = requestData.code
+	if not code or code == "" then
+		return { error = "Code is required" }
+	end
+
+	-- Capture print output
+	local output = {}
+	local oldPrint = print
+	local oldWarn = warn
+	print = function(...)
+		local args = {...}
+		local parts = {}
+		for i = 1, select("#", ...) do
+			table.insert(parts, tostring(args[i]))
+		end
+		table.insert(output, table.concat(parts, "\t"))
+		oldPrint(...)
+	end
+	warn = function(...)
+		local args = {...}
+		local parts = {}
+		for i = 1, select("#", ...) do
+			table.insert(parts, tostring(args[i]))
+		end
+		table.insert(output, "[warn] " .. table.concat(parts, "\t"))
+		oldWarn(...)
+	end
+
+	local success, result = pcall(function()
+		local fn, compileError = loadstring(code)
+		if not fn then
+			error("Compile error: " .. tostring(compileError))
+		end
+		return fn()
+	end)
+
+	-- Restore original print/warn
+	print = oldPrint
+	warn = oldWarn
+
+	if success then
+		return {
+			success = true,
+			returnValue = result ~= nil and tostring(result) or nil,
+			output = output,
+			message = "Code executed successfully"
+		}
+	else
+		return {
+			success = false,
+			error = tostring(result),
+			output = output,
+			message = "Code execution failed"
+		}
+	end
 end
 
 local function updateUIState()
