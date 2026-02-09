@@ -34,7 +34,7 @@ gemini mcp add robloxstudio npx --trust -- -y robloxstudio-mcp@latest
 Plugin shows "Connected" when ready.
 
 <details>
-<summary>Other MCP clients (Claude Desktop, etc.)</summary>
+<summary>Other MCP clients (Claude Desktop, Cursor, etc.)</summary>
 
 ```json
 {
