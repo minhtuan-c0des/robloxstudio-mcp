@@ -1,6 +1,6 @@
 import { Connection } from "../types";
 
-const CURRENT_VERSION = "2.0.0";
+const CURRENT_VERSION = "__VERSION__";
 const MAX_CONNECTIONS = 5;
 const BASE_PORT = 58741;
 let activeTabIndex = 0;

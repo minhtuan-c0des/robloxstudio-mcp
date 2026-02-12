@@ -8,9 +8,13 @@ import {
   ListToolsRequestSchema,
   McpError,
 } from '@modelcontextprotocol/sdk/types.js';
+import { createRequire } from 'module';
 import { createHttpServer } from './http-server.js';
 import { RobloxStudioTools } from './tools/index.js';
 import { BridgeService } from './bridge-service.js';
+
+const require = createRequire(import.meta.url);
+const { version: VERSION } = require('../package.json');
 
 class RobloxStudioMCPServer {
   private server: Server;
@@ -21,7 +25,7 @@ class RobloxStudioMCPServer {
     this.server = new Server(
       {
         name: 'robloxstudio-mcp',
-        version: '2.0.0',
+        version: VERSION,
       },
       {
         capabilities: {

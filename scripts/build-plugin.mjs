@@ -6,6 +6,7 @@ import { dirname, join, basename } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, '..');
+const { version: VERSION } = JSON.parse(readFileSync(join(rootDir, 'package.json'), 'utf8'));
 const pluginDir = join(rootDir, 'studio-plugin');
 const outDir = join(pluginDir, 'out');
 const serverDir = join(outDir, 'server');
@@ -18,6 +19,10 @@ function escapeCdata(source) {
   return source.replace(/\]\]>/g, ']]]]><![CDATA[>');
 }
 
+function injectVersion(source) {
+  return source.replace(/__VERSION__/g, VERSION);
+}
+
 const serverInitPath = join(serverDir, 'init.server.luau');
 if (!existsSync(serverInitPath)) {
   console.error(`Server script not found at ${serverInitPath}`);
@@ -25,7 +30,7 @@ if (!existsSync(serverInitPath)) {
   process.exit(1);
 }
 
-const mainSource = readFileSync(serverInitPath, 'utf8');
+const mainSource = injectVersion(readFileSync(serverInitPath, 'utf8'));
 
 let refId = 1;
 
@@ -69,7 +74,7 @@ function buildModuleItems(dir, depth = 0) {
       const currentRef = refId;
 
       if (initFile) {
-        const moduleSource = readFileSync(initFile, 'utf8');
+        const moduleSource = injectVersion(readFileSync(initFile, 'utf8'));
         const childItems = buildModuleItems(fullPath, depth + 1);
         items += `
       ${'  '.repeat(depth)}<Item class="ModuleScript" referent="${currentRef}">
@@ -90,7 +95,7 @@ function buildModuleItems(dir, depth = 0) {
     } else if (isLuaFile(entry.name) && !INIT_FILENAMES.has(entry.name)) {
       const ext = entry.name.endsWith('.luau') ? '.luau' : '.lua';
       const moduleName = basename(entry.name, ext);
-      const moduleSource = readFileSync(fullPath, 'utf8');
+      const moduleSource = injectVersion(readFileSync(fullPath, 'utf8'));
       refId++;
       items += `
       ${'  '.repeat(depth)}<Item class="ModuleScript" referent="${refId}">

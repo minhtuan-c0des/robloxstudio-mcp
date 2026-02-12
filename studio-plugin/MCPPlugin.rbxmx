@@ -9,13 +9,10 @@ local TS = require(script.include.RuntimeLib)
 local State = TS.import(script, script, "modules", "State")
 local UI = TS.import(script, script, "modules", "UI")
 local Communication = TS.import(script, script, "modules", "Communication")
--- Initialize UI (pass plugin global - only available in server scripts)
 UI.init(plugin)
 local elements = UI.getElements()
--- Create toolbar button
 local toolbar = plugin:CreateToolbar("MCP Integration")
 local button = toolbar:CreateButton("MCP Server", "Connect to MCP Server for AI Integration", "rbxassetid://10734944444")
--- Connect/Disconnect button (operates on the active tab's connection)
 elements.connectButton.Activated:Connect(function()
 	local conn = State.getActiveConnection()
 	if conn and conn.isActive then
@@ -24,15 +21,12 @@ elements.connectButton.Activated:Connect(function()
 		Communication.activatePlugin(State.getActiveTabIndex())
 	end
 end)
--- Toolbar toggle
 button.Click:Connect(function()
 	elements.screenGui.Enabled = not elements.screenGui.Enabled
 end)
--- Cleanup on unload: disconnect ALL connections
 plugin.Unloading:Connect(function()
 	Communication.deactivateAll()
 end)
--- Initial state + update check
 UI.updateUIState()
 Communication.checkForUpdates()
 ]]></string>
@@ -3099,7 +3093,7 @@ return {
         <Properties>
           <string name="Name">State</string>
           <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
-local CURRENT_VERSION = "2.0.0"
+local CURRENT_VERSION = "2.0.1"
 local MAX_CONNECTIONS = 5
 local BASE_PORT = 58741
 local activeTabIndex = 0
@@ -3406,7 +3400,6 @@ local function init(pluginRef)
 	mainFrame.BackgroundColor3 = C.bg
 	mainFrame.BorderSizePixel = 0
 	mainFrame.Parent = screenGui
-	-- Header
 	local header = Instance.new("Frame")
 	header.Size = UDim2.new(1, 0, 0, 40)
 	header.BackgroundColor3 = C.bg
@@ -3440,7 +3433,6 @@ local function init(pluginRef)
 	creditsLabel.Font = Enum.Font.GothamMedium
 	creditsLabel.TextXAlignment = Enum.TextXAlignment.Left
 	creditsLabel.Parent = header
-	-- Status dot in header
 	local statusContainer = Instance.new("Frame")
 	statusContainer.Size = UDim2.new(0, 20, 0, 22)
 	statusContainer.Position = UDim2.new(1, -26, 0, 2)
@@ -3474,7 +3466,6 @@ local function init(pluginRef)
 	statusText.Font = Enum.Font.GothamMedium
 	statusText.TextColor3 = C.white
 	statusText.Parent = statusContainer
-	-- Tab bar
 	local tabBar = Instance.new("Frame")
 	tabBar.Size = UDim2.new(1, 0, 0, 22)
 	tabBar.Position = UDim2.new(0, 0, 0, 40)
@@ -3524,7 +3515,6 @@ local function init(pluginRef)
 			switchToTab(newIndex)
 		end
 	end)
-	-- Update banner
 	local updateBanner = Instance.new("Frame")
 	updateBanner.Size = UDim2.new(1, -16, 0, 24)
 	updateBanner.Position = UDim2.new(0, 8, 0, 64)
@@ -3558,7 +3548,6 @@ local function init(pluginRef)
 	local updateLinkCorner = Instance.new("UICorner")
 	updateLinkCorner.CornerRadius = UDim.new(0, 3)
 	updateLinkCorner.Parent = updateLink
-	-- Content
 	local contentY = 66
 	local contentFrame = Instance.new("ScrollingFrame")
 	contentFrame.Size = UDim2.new(1, -16, 1, -(contentY + 8))
@@ -3570,7 +3559,6 @@ local function init(pluginRef)
 	contentFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 	contentFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	contentFrame.Parent = mainFrame
-	-- Card
 	local card = Instance.new("Frame")
 	card.Size = UDim2.new(1, 0, 0, 0)
 	card.AutomaticSize = Enum.AutomaticSize.Y
@@ -3591,7 +3579,6 @@ local function init(pluginRef)
 	cardLayout.Padding = UDim.new(0, 6)
 	cardLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	cardLayout.Parent = card
-	-- URL input
 	local urlInput = Instance.new("TextBox")
 	urlInput.Size = UDim2.new(1, 0, 0, 26)
 	urlInput.BackgroundColor3 = C.bg
@@ -3612,7 +3599,6 @@ local function init(pluginRef)
 	urlPadding.PaddingLeft = UDim.new(0, 8)
 	urlPadding.PaddingRight = UDim.new(0, 8)
 	urlPadding.Parent = urlInput
-	-- Status row
 	local statusRow = Instance.new("Frame")
 	statusRow.Size = UDim2.new(1, 0, 0, 14)
 	statusRow.BackgroundTransparency = 1
@@ -3639,7 +3625,6 @@ local function init(pluginRef)
 	detailStatusLabel.TextXAlignment = Enum.TextXAlignment.Right
 	detailStatusLabel.TextWrapped = true
 	detailStatusLabel.Parent = statusRow
-	-- Steps
 	local stepsFrame = Instance.new("Frame")
 	stepsFrame.Size = UDim2.new(1, 0, 0, 0)
 	stepsFrame.AutomaticSize = Enum.AutomaticSize.Y
@@ -3687,7 +3672,6 @@ local function init(pluginRef)
 	local _binding_2 = createStepRow("Commands", 3)
 	local step3Dot = _binding_2[2]
 	local step3Label = _binding_2[3]
-	-- Troubleshoot
 	local troubleshootLabel = Instance.new("TextLabel")
 	troubleshootLabel.Size = UDim2.new(1, 0, 0, 24)
 	troubleshootLabel.BackgroundTransparency = 1
@@ -3700,7 +3684,6 @@ local function init(pluginRef)
 	troubleshootLabel.TextXAlignment = Enum.TextXAlignment.Left
 	troubleshootLabel.LayoutOrder = 4
 	troubleshootLabel.Parent = card
-	-- Connect button
 	local connectButton = Instance.new("TextButton")
 	connectButton.Size = UDim2.new(1, 0, 0, 28)
 	connectButton.BackgroundColor3 = C.surface
@@ -3962,7 +3945,6 @@ local function convertPropertyValue(instance, propertyName, propertyValue)
 	if type(_propertyValue) == "table" then
 		local arr = propertyValue
 		local tbl = propertyValue
-		-- Array-style values
 		if type(arr) == "table" and #arr > 0 then
 			local len = #arr
 			if len == 3 then
@@ -4071,9 +4053,7 @@ local function convertPropertyValue(instance, propertyName, propertyValue)
 				end
 			end
 		end
-		-- Object with X, Y, Z keys (Vector3)
 		if tbl.X ~= nil or tbl.Y ~= nil or tbl.Z ~= nil then
-			-- Check if X/Y are tables (UDim2)
 			local _x = tbl.X
 			local _condition = type(_x) == "table"
 			if _condition then
@@ -4115,7 +4095,6 @@ local function convertPropertyValue(instance, propertyName, propertyValue)
 			end
 			return Vector3.new(_condition_1, _condition_2, _condition_3)
 		end
-		-- Object with R, G, B keys (Color3)
 		if tbl.R ~= nil or tbl.G ~= nil or tbl.B ~= nil then
 			local _condition = (tbl.R)
 			if _condition == nil then
@@ -4132,7 +4111,6 @@ local function convertPropertyValue(instance, propertyName, propertyValue)
 			return Color3.new(_condition, _condition_1, _condition_2)
 		end
 	end
-	-- Handle Enum values
 	local _propertyValue_1 = propertyValue
 	if type(_propertyValue_1) == "string" then
 		local success, currentVal = pcall(function()
@@ -4248,7 +4226,6 @@ local function evaluateFormula(formula, variables, instance, index)
 		if num ~= nil then
 			return num
 		end
-		-- Multiply
 		do
 			local a, b = string.match(value, "^([%d%.%-]+)%s*%*%s*([%d%.%-]+)$")
 			local _condition = a
@@ -4267,7 +4244,6 @@ local function evaluateFormula(formula, variables, instance, index)
 				return _condition_1 * _condition_2
 			end
 		end
-		-- Add
 		do
 			local a, b = string.match(value, "^([%d%.%-]+)%s*%+%s*([%d%.%-]+)$")
 			local _condition = a
@@ -4286,7 +4262,6 @@ local function evaluateFormula(formula, variables, instance, index)
 				return _condition_1 + _condition_2
 			end
 		end
-		-- Subtract
 		do
 			local a, b = string.match(value, "^([%d%.%-]+)%s*%-%s*([%d%.%-]+)$")
 			local _condition = a
@@ -4305,7 +4280,6 @@ local function evaluateFormula(formula, variables, instance, index)
 				return _condition_1 - _condition_2
 			end
 		end
-		-- Divide
 		do
 			local a, b = string.match(value, "^([%d%.%-]+)%s*/%s*([%d%.%-]+)$")
 			local _condition = a
