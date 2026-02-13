@@ -2,6 +2,7 @@ import { HttpService, LogService } from "@rbxts/services";
 
 const StudioTestService = game.GetService("StudioTestService");
 const ServerScriptService = game.GetService("ServerScriptService");
+const ScriptEditorService = game.GetService("ScriptEditorService");
 
 const STOP_LISTENER_NAME = "__MCP_StopListener";
 
@@ -30,9 +31,9 @@ while true do
 		})
 	end)
 	if not ok then
-		warn("[MCP] HTTP request failed: " .. tostring(res))
+		warn("[MCP] HTTP failed: " .. tostring(res))
 	elseif not res.Success then
-		warn("[MCP] HTTP " .. tostring(res.StatusCode) .. ": " .. tostring(res.Body))
+		warn("[MCP] HTTP " .. tostring(res.StatusCode))
 	else
 		local dok, data = pcall(function()
 			return HttpService:JSONDecode(res.Body)
@@ -57,6 +58,28 @@ function cleanupStopListener() {
 	}
 }
 
+function injectStopListener(serverPort: number) {
+	// HttpEnabled is typed readonly but writable from plugin context
+	(HttpService as unknown as { HttpEnabled: boolean }).HttpEnabled = true;
+
+	const listener = new Instance("Script");
+	listener.Name = STOP_LISTENER_NAME;
+	listener.Parent = ServerScriptService;
+
+	const source = buildStopListenerSource(serverPort);
+
+	// Try ScriptEditorService first (modern API), fall back to direct Source
+	const [seOk] = pcall(() => {
+		ScriptEditorService.UpdateSourceAsync(listener, () => source);
+	});
+	if (!seOk) {
+		(listener as unknown as { Source: string }).Source = source;
+	}
+
+	stopListenerScript = listener;
+	warn(`[MCP] Stop listener injected (port ${serverPort})`);
+}
+
 function startPlaytest(requestData: Record<string, unknown>) {
 	const mode = requestData.mode as string | undefined;
 	const serverPort = requestData.serverPort as number | undefined;
@@ -76,22 +99,6 @@ function startPlaytest(requestData: Record<string, unknown>) {
 
 	cleanupStopListener();
 
-	if (serverPort !== undefined && serverPort > 0) {
-		const [injected, injErr] = pcall(() => {
-			// HttpEnabled is typed readonly but writable from plugin context
-			(HttpService as unknown as { HttpEnabled: boolean }).HttpEnabled = true;
-
-			const listener = new Instance("Script");
-			listener.Name = STOP_LISTENER_NAME;
-			listener.Source = buildStopListenerSource(serverPort);
-			listener.Parent = ServerScriptService;
-			stopListenerScript = listener;
-		});
-		if (!injected) {
-			warn(`[MCP] Failed to inject stop listener: ${injErr}`);
-		}
-	}
-
 	logConnection = LogService.MessageOut.Connect((message, messageType) => {
 		outputBuffer.push({
 			message,
@@ -99,6 +106,13 @@ function startPlaytest(requestData: Record<string, unknown>) {
 			timestamp: tick(),
 		});
 	});
+
+	if (serverPort !== undefined && serverPort > 0) {
+		const [injected, injErr] = pcall(() => injectStopListener(serverPort));
+		if (!injected) {
+			warn(`[MCP] Failed to inject stop listener: ${injErr}`);
+		}
+	}
 
 	task.spawn(() => {
 		const [ok, result] = pcall(() => {
