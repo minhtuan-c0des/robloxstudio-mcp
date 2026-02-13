@@ -362,30 +362,15 @@ function init(pluginRef: Plugin) {
 	updateBannerCorner.Parent = updateBanner;
 
 	const updateBannerText = new Instance("TextLabel");
-	updateBannerText.Size = new UDim2(1, -54, 1, 0);
+	updateBannerText.Size = new UDim2(1, -16, 1, 0);
 	updateBannerText.Position = new UDim2(0, 8, 0, 0);
 	updateBannerText.BackgroundTransparency = 1;
-	updateBannerText.Text = "Update available: v0.0.0";
+	updateBannerText.Text = "";
 	updateBannerText.TextColor3 = C.yellow;
 	updateBannerText.TextSize = 9;
 	updateBannerText.Font = Enum.Font.GothamMedium;
 	updateBannerText.TextXAlignment = Enum.TextXAlignment.Left;
 	updateBannerText.Parent = updateBanner;
-
-	const updateLink = new Instance("TextButton");
-	updateLink.Size = new UDim2(0, 40, 0, 16);
-	updateLink.Position = new UDim2(1, -46, 0, 4);
-	updateLink.BackgroundColor3 = C.yellow;
-	updateLink.BackgroundTransparency = 0.85;
-	updateLink.Text = "Get";
-	updateLink.TextColor3 = C.yellow;
-	updateLink.TextSize = 9;
-	updateLink.Font = Enum.Font.GothamBold;
-	updateLink.Parent = updateBanner;
-
-	const updateLinkCorner = new Instance("UICorner");
-	updateLinkCorner.CornerRadius = new UDim(0, 3);
-	updateLinkCorner.Parent = updateLink;
 
 	const contentY = 66;
 	const contentFrame = new Instance("ScrollingFrame");
@@ -580,21 +565,6 @@ function init(pluginRef: Plugin) {
 		}
 	});
 
-	updateLink.Activated.Connect(() => {
-		const url = "https://github.com/boshyxd/robloxstudio-mcp/releases";
-		const env = getfenv(0) as unknown as Record<string, unknown>;
-		if (env["setclipboard"]) {
-			pcall(() => {
-				(env["setclipboard"] as (s: string) => void)(url);
-			});
-		}
-		updateBannerText.Text = "Link copied!";
-		task.delay(3, () => {
-			if (updateBanner.Visible) {
-				updateBannerText.Text = "Update available - check GitHub";
-			}
-		});
-	});
 
 	elements = {
 		screenGui, mainFrame, contentFrame, statusLabel, detailStatusLabel,

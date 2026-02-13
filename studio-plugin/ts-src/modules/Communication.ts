@@ -365,7 +365,7 @@ function checkForUpdates() {
 				const latestVersion = data.version;
 				if (Utils.compareVersions(State.CURRENT_VERSION, latestVersion) < 0) {
 					const ui = UI.getElements();
-					ui.updateBannerText.Text = `Update available: v${latestVersion}`;
+					ui.updateBannerText.Text = `v${latestVersion} available - github.com/boshyxd/robloxstudio-mcp`;
 					ui.updateBanner.Visible = true;
 					ui.contentFrame.Position = new UDim2(0, 8, 0, 92);
 					ui.contentFrame.Size = new UDim2(1, -16, 1, -100);

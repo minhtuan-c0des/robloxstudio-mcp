@@ -3027,11 +3027,47 @@ return {
 local TS = require(script.Parent.Parent.Parent.include.RuntimeLib)
 local LogService = TS.import(script, script.Parent.Parent.Parent, "node_modules", "@rbxts", "services").LogService
 local StudioTestService = game:GetService("StudioTestService")
+local ServerScriptService = game:GetService("ServerScriptService")
+local ScriptEditorService = game:GetService("ScriptEditorService")
+local STOP_SIGNAL = "__MCP_STOP__"
 local testRunning = false
 local outputBuffer = {}
 local logConnection
 local testResult
 local testError
+local stopListenerScript
+local function buildStopListenerSource()
+	return `local LogService = game:GetService("LogService")\
+local StudioTestService = game:GetService("StudioTestService")\
+LogService.MessageOut:Connect(function(message)\
+	if message == "{STOP_SIGNAL}" then\
+		pcall(function() StudioTestService:EndTest("stopped_by_mcp") end)\
+	end\
+end)`
+end
+local function injectStopListener()
+	local listener = Instance.new("Script")
+	listener.Name = "__MCP_StopListener"
+	listener.Parent = ServerScriptService
+	local source = buildStopListenerSource()
+	local seOk = pcall(function()
+		ScriptEditorService:UpdateSourceAsync(listener, function()
+			return source
+		end)
+	end)
+	if not seOk then
+		listener.Source = source
+	end
+	stopListenerScript = listener
+end
+local function cleanupStopListener()
+	if stopListenerScript then
+		pcall(function()
+			return stopListenerScript:Destroy()
+		end)
+		stopListenerScript = nil
+	end
+end
 local function startPlaytest(requestData)
 	local mode = requestData.mode
 	if mode ~= "play" and mode ~= "run" then
@@ -3048,7 +3084,11 @@ local function startPlaytest(requestData)
 	outputBuffer = {}
 	testResult = nil
 	testError = nil
+	cleanupStopListener()
 	logConnection = LogService.MessageOut:Connect(function(message, messageType)
+		if message == STOP_SIGNAL then
+			return nil
+		end
 		local _outputBuffer = outputBuffer
 		local _arg0 = {
 			message = message,
@@ -3057,6 +3097,12 @@ local function startPlaytest(requestData)
 		}
 		table.insert(_outputBuffer, _arg0)
 	end)
+	local injected, injErr = pcall(function()
+		return injectStopListener()
+	end)
+	if not injected then
+		warn(`[MCP] Failed to inject stop listener: {injErr}`)
+	end
 	task.spawn(function()
 		local ok, result = pcall(function()
 			if mode == "play" then
@@ -3074,6 +3120,7 @@ local function startPlaytest(requestData)
 			logConnection = nil
 		end
 		testRunning = false
+		cleanupStopListener()
 	end)
 	return {
 		success = true,
@@ -3086,14 +3133,7 @@ local function stopPlaytest(_requestData)
 			error = "No test is currently running",
 		}
 	end
-	local ok, err = pcall(function()
-		StudioTestService:EndTest("stopped_by_mcp")
-	end)
-	if not ok then
-		return {
-			error = `EndTest failed: {err}`,
-		}
-	end
+	warn(STOP_SIGNAL)
 	local _object = {
 		success = true,
 	}
@@ -3103,7 +3143,7 @@ local function stopPlaytest(_requestData)
 	table.move(outputBuffer, 1, #outputBuffer, _length + 1, _array)
 	_object[_left] = _array
 	_object.outputCount = #outputBuffer
-	_object.message = "Playtest stopped."
+	_object.message = "Playtest stop signal sent."
 	return _object
 end
 local function getPlaytestOutput(_requestData)
@@ -3133,7 +3173,7 @@ return {
         <Properties>
           <string name="Name">State</string>
           <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
-local CURRENT_VERSION = "2.2.7"
+local CURRENT_VERSION = "2.2.8"
 local MAX_CONNECTIONS = 5
 local BASE_PORT = 58741
 local activeTabIndex = 0

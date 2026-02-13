@@ -869,7 +869,7 @@ class RobloxStudioMCPServer {
 
           {
             name: 'start_playtest',
-            description: 'Start a play test session in Roblox Studio. Begins capturing output (print/warn/error) from LogService. The test runs asynchronously; use get_playtest_output to read output and stop_playtest to end the session.',
+            description: 'Start a play test session in Roblox Studio. Captures all output (print/warn/error) from LogService. Use get_playtest_output to poll for logs while running, then stop_playtest to end. Typical workflow: add print/warn statements to code, start playtest, poll output to observe behavior, stop, analyze logs, fix issues with set_script_source, and repeat until correct.',
             inputSchema: {
               type: 'object',
               properties: {
@@ -884,7 +884,7 @@ class RobloxStudioMCPServer {
           },
           {
             name: 'stop_playtest',
-            description: 'Stop the play test session in Roblox Studio and return all captured output messages.',
+            description: 'Stop the running play test session and return all captured output. Call this after observing enough output via get_playtest_output, or when you need to make code changes before the next run.',
             inputSchema: {
               type: 'object',
               properties: {}
@@ -892,7 +892,7 @@ class RobloxStudioMCPServer {
           },
           {
             name: 'get_playtest_output',
-            description: 'Get the current output buffer and test status without stopping the test. Returns isRunning, output messages, and any test result or error.',
+            description: 'Poll the output buffer without stopping the test. Returns isRunning, captured print/warn/error messages, and any test result. Call repeatedly to monitor a running session — useful for waiting on specific log output or checking if errors have occurred.',
             inputSchema: {
               type: 'object',
               properties: {}
