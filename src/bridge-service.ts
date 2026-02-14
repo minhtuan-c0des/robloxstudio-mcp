@@ -8,18 +8,17 @@ interface PendingRequest {
   resolve: (value: any) => void;
   reject: (error: any) => void;
   timeoutId: ReturnType<typeof setTimeout>;
-  inFlight?: boolean;
 }
 
 export class BridgeService {
   private pendingRequests: Map<string, PendingRequest> = new Map();
-  private requestTimeout = 120000; // 120 seconds timeout
+  private requestTimeout = 30000;
 
   async sendRequest(endpoint: string, data: any): Promise<any> {
     const requestId = uuidv4();
 
     return new Promise((resolve, reject) => {
-      // Set timeout and store the ID so we can clear it later
+
       const timeoutId = setTimeout(() => {
         if (this.pendingRequests.has(requestId)) {
           this.pendingRequests.delete(requestId);
@@ -42,18 +41,16 @@ export class BridgeService {
   }
 
   getPendingRequest(): { requestId: string; request: { endpoint: string; data: any } } | null {
-    // Get oldest pending request that isn't already being processed
+
     let oldestRequest: PendingRequest | null = null;
 
     for (const request of this.pendingRequests.values()) {
-      if (request.inFlight) continue;
       if (!oldestRequest || request.timestamp < oldestRequest.timestamp) {
         oldestRequest = request;
       }
     }
 
     if (oldestRequest) {
-      oldestRequest.inFlight = true;
       return {
         requestId: oldestRequest.id,
         request: {
@@ -84,7 +81,6 @@ export class BridgeService {
     }
   }
 
-  // Clean up old requests
   cleanupOldRequests() {
     const now = Date.now();
     for (const [id, request] of this.pendingRequests.entries()) {
@@ -96,7 +92,6 @@ export class BridgeService {
     }
   }
 
-  // Force cleanup all pending requests (used on disconnect)
   clearAllPendingRequests() {
     for (const [, request] of this.pendingRequests.entries()) {
       clearTimeout(request.timeoutId);
